@@ -1,0 +1,17 @@
+/node_modules
+/vendor
+/.git
+/.idea
+/.vscode
+.env
+.env.*
+!.env.example
+storage/logs/*
+storage/framework/cache/*
+storage/framework/sessions/*
+storage/framework/views/*
+bootstrap/cache/*
+*.md
+tests
+phpunit.xml
+.gitignore
