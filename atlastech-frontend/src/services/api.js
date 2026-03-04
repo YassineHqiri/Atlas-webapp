@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // In production: use VITE_API_URL if set, else same-origin /api (works when frontend & backend share domain)
 const API_BASE_URL = import.meta.env.VITE_API_URL
-  || (import.meta.env.PROD ? `${window.location.origin}/api` : 'http://localhost:8001/api');
+  || (import.meta.env.PROD ? `${window.location.origin}/api` : 'http://localhost:8000/api');
 
 const api = axios.create({
   baseURL: API_BASE_URL,
