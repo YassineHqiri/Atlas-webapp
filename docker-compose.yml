@@ -1,0 +1,54 @@
+version: '3.8'
+services:
+  # Backend API
+  atlastech-backend:
+    build:
+      context: ./atlastech-backend
+      dockerfile: Dockerfile
+    container_name: atlastech-backend
+    ports:
+      - "8080:443"
+    volumes:
+      - /var/www/atlas-frontend.crt:/etc/nginx/ssl/backend.crt:ro
+      - /var/www/atlas-frontend.key:/etc/nginx/ssl/backend.key:ro
+    environment:
+      - APP_NAME=AtlasTech
+      - APP_ENV=production
+      - APP_DEBUG=false
+      - APP_KEY=base64:Guycw2K728RHaKqECZ5MmbXCbDULQX31rDN61iL/OXw=
+      - APP_URL=https://13.62.211.220:8080
+      - FRONTEND_URL=https://13.62.211.220:8443
+      - DB_CONNECTION=mysql
+      - DB_HOST=atlascommercial.c1u4ayqi0rzj.eu-north-1.rds.amazonaws.com
+      - DB_PORT=3306
+      - DB_DATABASE=atlascommercial
+      - DB_USERNAME=admin
+      - DB_PASSWORD=33Qlpbtx7iYARTPO
+      - SESSION_DRIVER=database
+      - CACHE_DRIVER=file
+      - CORS_ALLOWED_ORIGINS=https://13.62.211.220:8443
+      - SANCTUM_STATEFUL_DOMAINS=13.62.211.220:8443
+    networks:
+      - atlas-network
+
+  # Frontend
+  atlastech-frontend:
+    build:
+      context: ./atlastech-frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: https://13.62.211.220:8080/api
+    container_name: atlastech-frontend
+    ports:
+      - "8443:443"
+    volumes:
+      - /var/www/atlas-frontend.crt:/etc/nginx/ssl/atlas-frontend.crt:ro
+      - /var/www/atlas-frontend.key:/etc/nginx/ssl/atlas-frontend.key:ro
+    networks:
+      - atlas-network
+    depends_on:
+      - atlastech-backend
+
+networks:
+  atlas-network:
+    driver: bridge

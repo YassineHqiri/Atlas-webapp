@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\PublicController;
+use App\Http\Controllers\Api\ChatbotController;
 use App\Http\Controllers\Api\Admin\AuthController;
 use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\Admin\OrderController;
@@ -35,6 +36,10 @@ Route::prefix('public')->group(function () {
     Route::get('/service-packs', [PublicController::class, 'servicePacks']);
     Route::post('/orders', [PublicController::class, 'order'])->middleware('optionalAuth');
     Route::post('/contact', [PublicController::class, 'contact']);
+});
+
+Route::prefix('chatbot')->group(function () {
+    Route::post('/reply', [ChatbotController::class, 'reply']);
 });
 
 Route::prefix('admin')->group(function () {
