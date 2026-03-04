@@ -1,5 +1,5 @@
 # Build stage - install dependencies
-FROM composer:2 AS composer
+FROM composer:2.7 AS composer
 WORKDIR /app
 
 COPY composer.json composer.lock ./
@@ -17,6 +17,7 @@ RUN apk add --no-cache \
     nginx \
     mysql-client \
     libpng-dev \
+    oniguruma-dev \
     libzip-dev \
     zip \
     unzip \
