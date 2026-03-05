@@ -108,4 +108,17 @@ return [
 
     'password_timeout' => 10800,
 
+    /*
+    |--------------------------------------------------------------------------
+    | Failed Authentication Attempts Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configure the security threshold for failed login attempts,
+    | lockout duration, and related security measures.
+    |
+    */
+
+    'max_login_attempts' => env('MAX_LOGIN_ATTEMPTS', 5),
+    'lockout_duration_minutes' => env('LOCKOUT_DURATION_MINUTES', 15),
+
 ];

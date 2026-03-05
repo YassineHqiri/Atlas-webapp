@@ -3,12 +3,14 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useCustomerAuth } from '../../context/CustomerAuthContext';
+import { useRecaptcha } from '../../hooks/useRecaptcha';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const recaptchaReady = useRecaptcha('recaptcha-container-login');
   const { login } = useCustomerAuth();
   const navigate = useNavigate();
 
@@ -20,13 +22,31 @@ const Login = () => {
     setErrors(errs);
     if (Object.keys(errs).length) return;
 
+    // Check if reCAPTCHA is completed
+    if (!window.grecaptcha) {
+      toast.error('reCAPTCHA not loaded. Please refresh the page.');
+      return;
+    }
+
+    const recaptchaToken = window.grecaptcha.getResponse();
+    if (!recaptchaToken) {
+      toast.error('Please verify that you are not a robot');
+      return;
+    }
+
     setLoading(true);
     try {
-      await login(email, password);
+      await login(email, password, recaptchaToken);
       toast.success('Welcome back!');
       navigate('/order');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Invalid credentials');
+      const message = err.response?.data?.message || 'Login failed. Please try again.';
+      toast.error(message);
+      
+      // Reset reCAPTCHA on error
+      if (window.grecaptcha) {
+        window.grecaptcha.reset();
+      }
     } finally {
       setLoading(false);
     }
@@ -66,10 +86,22 @@ const Login = () => {
               <Link to="/forgot-password" className="block text-sm text-purple-600 hover:text-purple-700 mt-2">Forgot password?</Link>
             </div>
 
+            {/* reCAPTCHA Widget */}
+            <div className="flex justify-center py-2">
+              <div id="recaptcha-container-login"></div>
+            </div>
+
+            {!recaptchaReady && (
+              <div className="text-center">
+                <p className="text-yellow-600 text-xs">Loading security verification...</p>
+                <p className="text-gray-400 text-xs mt-1">Please wait while we load reCAPTCHA</p>
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-black text-white font-semibold rounded-2xl hover:bg-gray-800 transition-colors disabled:opacity-50"
+              disabled={loading || !recaptchaReady}
+              className="w-full py-3 bg-black text-white font-semibold rounded-2xl hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Signing in...' : 'Log In'}
             </button>

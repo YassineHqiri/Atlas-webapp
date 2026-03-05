@@ -3,11 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { useCustomerAuth } from '../../context/CustomerAuthContext';
+import { useRecaptcha } from '../../hooks/useRecaptcha';
 
 const Register = () => {
   const [form, setForm] = useState({ name: '', email: '', password: '', password_confirmation: '' });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const recaptchaReady = useRecaptcha('recaptcha-container-register');
   const { register } = useCustomerAuth();
   const navigate = useNavigate();
 
@@ -31,9 +33,22 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
+
+    // Check if reCAPTCHA is completed
+    if (!window.grecaptcha) {
+      toast.error('reCAPTCHA not loaded. Please refresh the page.');
+      return;
+    }
+
+    const recaptchaToken = window.grecaptcha.getResponse();
+    if (!recaptchaToken) {
+      toast.error('Please verify that you are not a robot');
+      return;
+    }
+
     setLoading(true);
     try {
-      await register(form.name, form.email, form.password, form.password_confirmation);
+      await register(form.name, form.email, form.password, form.password_confirmation, recaptchaToken);
       toast.success('Account created!');
       navigate('/order');
     } catch (err) {
@@ -43,6 +58,11 @@ const Register = () => {
         const flat = {};
         Object.entries(err.response.data.errors).forEach(([k, v]) => { flat[k] = Array.isArray(v) ? v[0] : v; });
         setErrors(flat);
+      }
+      
+      // Reset reCAPTCHA on error
+      if (window.grecaptcha) {
+        window.grecaptcha.reset();
       }
     } finally {
       setLoading(false);
@@ -76,10 +96,22 @@ const Register = () => {
               </div>
             ))}
 
+            {/* reCAPTCHA Widget */}
+            <div className="flex justify-center py-2">
+              <div id="recaptcha-container-register"></div>
+            </div>
+
+            {!recaptchaReady && (
+              <div className="text-center">
+                <p className="text-yellow-600 text-xs">Loading security verification...</p>
+                <p className="text-gray-400 text-xs mt-1">Please wait while we load reCAPTCHA</p>
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-black text-white font-semibold rounded-2xl hover:bg-gray-800 transition-colors disabled:opacity-50"
+              disabled={loading || !recaptchaReady}
+              className="w-full py-3 bg-black text-white font-semibold rounded-2xl hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Creating...' : 'Create Account'}
             </button>

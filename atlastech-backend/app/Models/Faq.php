@@ -6,12 +6,17 @@ use Illuminate\Database\Eloquent\Model;
 
 class Faq extends Model
 {
-    protected $fillable = ['question', 'answer', 'is_active'];
+    protected $fillable = ['question', 'answer', 'is_active', 'language'];
     protected $casts = ['is_active' => 'boolean'];
 
     public function scopeActive($query)
     {
         return $query->where('is_active', true);
+    }
+
+    public function scopeLanguage($query, $language = 'fr')
+    {
+        return $query->where('language', $language);
     }
 
     public function scopeSearch($query, $term)

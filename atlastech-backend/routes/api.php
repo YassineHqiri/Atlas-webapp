@@ -15,8 +15,8 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::prefix('auth')->group(function () {
-    Route::post('/register', [\App\Http\Controllers\Api\AuthController::class, 'register']);
-    Route::post('/login', [\App\Http\Controllers\Api\AuthController::class, 'login']);
+    Route::post('/register', [\App\Http\Controllers\Api\AuthController::class, 'register'])->middleware('protect.auth');
+    Route::post('/login', [\App\Http\Controllers\Api\AuthController::class, 'login'])->middleware('protect.auth');
     Route::post('/forgot-password', [\App\Http\Controllers\Api\AuthController::class, 'forgotPassword']);
     Route::post('/reset-password', [\App\Http\Controllers\Api\AuthController::class, 'resetPassword']);
     Route::middleware('auth:sanctum')->group(function () {

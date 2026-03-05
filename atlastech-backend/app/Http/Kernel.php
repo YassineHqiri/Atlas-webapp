@@ -65,5 +65,6 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'optionalAuth' => \App\Http\Middleware\OptionalSanctum::class,
         'customer' => \App\Http\Middleware\EnsureCustomer::class,
+        'protect.auth' => \App\Http\Middleware\ProtectAgainstAuthAttacks::class,
     ];
 }

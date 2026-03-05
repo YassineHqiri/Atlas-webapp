@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             AdminUserSeeder::class,
             ServicePackSeeder::class,
             FaqSeeder::class,
+            FaqEnglishSeeder::class,
         ]);
     }
 }

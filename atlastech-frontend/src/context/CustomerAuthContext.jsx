@@ -16,12 +16,13 @@ export const CustomerAuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const register = async (name, email, password, password_confirmation) => {
+  const register = async (name, email, password, password_confirmation, g_recaptcha_response) => {
     const { data } = await publicApi.post('/auth/register', {
       name,
       email,
       password,
       password_confirmation,
+      g_recaptcha_response,
     });
     const { user, token } = data.data;
     localStorage.setItem('customer_token', token);
@@ -30,8 +31,12 @@ export const CustomerAuthProvider = ({ children }) => {
     return data;
   };
 
-  const login = async (email, password) => {
-    const { data } = await publicApi.post('/auth/login', { email, password });
+  const login = async (email, password, g_recaptcha_response) => {
+    const { data } = await publicApi.post('/auth/login', {
+      email,
+      password,
+      g_recaptcha_response,
+    });
     const { user, token } = data.data;
     localStorage.setItem('customer_token', token);
     localStorage.setItem('customer_user', JSON.stringify(user));

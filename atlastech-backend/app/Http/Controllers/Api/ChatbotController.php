@@ -13,50 +13,47 @@ use Illuminate\Support\Str;
 
 class ChatbotController extends Controller
 {
-    private const DEFAULT_RESPONSE = "Je n'ai pas trouvé la réponse à votre question. Veuillez contacter notre équipe : support@atlastech.com";
+    private const DEFAULT_RESPONSE_FR = "Je n'ai pas trouvé la réponse à votre question. Veuillez contacter notre équipe : support@atlastech.com";
+    private const DEFAULT_RESPONSE_EN = "I couldn't find an answer to your question. Please contact our team: support@atlastech.com";
     private const RATE_LIMIT_KEY = 'chatbot';
     private const RATE_LIMIT_PER_MINUTE = 10;
-    private const SIMILARITY_THRESHOLD = 0.15; // 15% de similarité minimum
+    private const SIMILARITY_THRESHOLD = 0.15;
+    private const SUPPORTED_LANGUAGES = ['fr', 'en'];
 
     public function reply(Request $request): JsonResponse
     {
-        // ============ SÉCURITÉ & VALIDATION ============
         $userMessage = strip_tags(trim($request->input('message', '')));
+        $language = trim($request->input('language', 'fr'));
+        
+        if (!in_array($language, self::SUPPORTED_LANGUAGES)) {
+            $language = 'fr';
+        }
 
-        // Validation
         if (empty($userMessage)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Le message ne peut pas être vide',
-            ], 400);
+            $message = $language === 'en' ? 'Message cannot be empty' : 'Le message ne peut pas être vide';
+            return response()->json(['success' => false, 'message' => $message], 400);
         }
 
         if (strlen($userMessage) > 255) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Le message ne doit pas dépasser 255 caractères',
-            ], 422);
+            $message = $language === 'en' ? 'Message must not exceed 255 characters' : 'Le message ne doit pas dépasser 255 caractères';
+            return response()->json(['success' => false, 'message' => $message], 422);
         }
 
-        // ============ RATE LIMITING ============
         $ip = $this->getClientIp($request);
         $rateLimitKey = self::RATE_LIMIT_KEY . ':' . $ip;
 
         if (RateLimiter::tooManyAttempts($rateLimitKey, self::RATE_LIMIT_PER_MINUTE)) {
             Log::warning('Chatbot rate limit exceeded', ['ip' => $ip]);
-            return response()->json([
-                'success' => false,
-                'message' => 'Trop de requêtes. Veuillez attendre quelques minutes.',
-            ], 429);
+            $message = $language === 'en' ? 'Too many requests. Please wait a few minutes.' : 'Trop de requêtes. Veuillez attendre quelques minutes.';
+            return response()->json(['success' => false, 'message' => $message], 429);
         }
 
-        RateLimiter::hit($rateLimitKey, 60); // 60 secondes
+        RateLimiter::hit($rateLimitKey, 60);
 
-        // ============ RECHERCHE FAQ INTELLIGENTE ============
-        $faq = $this->findBestMatch($userMessage);
-        $botResponse = $faq ? $faq->answer : self::DEFAULT_RESPONSE;
+        $faq = $this->findBestMatch($userMessage, $language);
+        $defaultResponse = $language === 'en' ? self::DEFAULT_RESPONSE_EN : self::DEFAULT_RESPONSE_FR;
+        $botResponse = $faq ? $faq->answer : $defaultResponse;
 
-        // ============ ENREGISTRER LE LOG ============
         try {
             ChatLog::create([
                 'user_message' => $userMessage,
@@ -64,48 +61,34 @@ class ChatbotController extends Controller
                 'ip_address' => $ip,
             ]);
         } catch (\Exception $e) {
-            Log::error('Erreur lors de l\'enregistrement du chat log', [
-                'error' => $e->getMessage(),
-            ]);
+            Log::error('Erreur lors de l\'enregistrement du chat log', ['error' => $e->getMessage()]);
         }
 
         return response()->json([
             'success' => true,
             'message' => $botResponse,
             'found' => !!$faq,
+            'language' => $language,
         ]);
     }
 
-    /**
-     * Trouve la meilleure correspondance FAQ avec algorithme intelligent
-     * Utilise:
-     * - Tokenization avec suppression des mots vides français
-     * - Similarité Jaccard entre ensembles de mots-clés
-     * - Correspondance partielle via Levenshtein
-     */
-    private function findBestMatch(string $userMessage): ?Faq
+    private function findBestMatch(string $userMessage, string $language = 'fr'): ?Faq
     {
-        $faqs = Faq::active()->get();
+        $faqs = Faq::active()->language($language)->get();
         
         if ($faqs->isEmpty()) {
             return null;
         }
 
         $scores = [];
-        $userWords = $this->tokenizeText($userMessage);
+        $userWords = $this->tokenizeText($userMessage, $language);
 
         foreach ($faqs as $faq) {
-            // Utiliser uniquement la question pour le matching (pas la réponse)
-            $faqWords = $this->tokenizeText($faq->question);
-            
-            // Calculer un score de pertinence
+            $faqWords = $this->tokenizeText($faq->question, $language);
             $score = $this->calculateSimilarity($userWords, $faqWords);
             
             if ($score > self::SIMILARITY_THRESHOLD) {
-                $scores[$faq->id] = [
-                    'faq' => $faq,
-                    'score' => $score
-                ];
+                $scores[$faq->id] = ['faq' => $faq, 'score' => $score];
             }
         }
 
@@ -113,31 +96,38 @@ class ChatbotController extends Controller
             return null;
         }
 
-        // Retourner la FAQ avec le meilleur score
         usort($scores, fn($a, $b) => $b['score'] <=> $a['score']);
-        
         return $scores[0]['faq'];
     }
 
-    /**
-     * Divise le texte en mots significatifs (tokenization)
-     * Élimine les mots vides français
-     */
-    private function tokenizeText(string $text): array
+    private function tokenizeText(string $text, string $language = 'fr'): array
     {
         $text = strtolower($text);
-        
-        // Remplacer tirets et apostrophes par espaces AVANT de nettoyer
         $text = preg_replace('/[\s\-\']+/', ' ', $text);
-        
-        // Supprimer caractères spéciaux mais garder lettres/accents/chiffres
         $text = preg_replace('/[^a-zàâäæçéèêëïîôöœüûùçñ0-9\s]/i', '', $text);
-        
-        // Diviser par espaces
         $words = preg_split('/\s+/', $text, -1, PREG_SPLIT_NO_EMPTY);
         
-        // Mots vides français à ignorer
-        $stopwords = [
+        $stopwords = $this->getStopwords($language);
+        
+        return array_filter($words, fn($word) => 
+            strlen($word) > 1 && !in_array($word, $stopwords)
+        );
+    }
+
+    private function getStopwords(string $language = 'fr'): array
+    {
+        if ($language === 'en') {
+            return [
+                'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+                'of', 'with', 'by', 'from', 'is', 'are', 'was', 'were', 'be',
+                'i', 'you', 'he', 'she', 'it', 'we', 'they', 'me', 'him', 'her', 'us',
+                'them', 'my', 'your', 'his', 'its', 'our', 'their', 'that',
+                'this', 'these', 'those', 'can', 'could', 'would', 'should', 'do',
+                'does', 'did', 'will', 'have', 'has', 'had', 'not', 'no', 'way'
+            ];
+        }
+
+        return [
             'et', 'ou', 'le', 'la', 'les', 'un', 'une', 'des', 'de', 'du',
             'à', 'au', 'dont', 'que', 'qui', 'qu', 'est', 'c', 'ç', 'ce',
             'cet', 'cette', 'ces', 'mon', 'ma', 'tes', 'ton', 'ta',
@@ -148,16 +138,8 @@ class ChatbotController extends Controller
             'ne', 'non', 'oui', 'si', 'être', 'avoir', 'aller', 'faire',
             'pouvoir', 'vouloir', 'devoir', 'savoir', 'aux', 'où', 'alors'
         ];
-        
-        return array_filter($words, fn($word) => 
-            strlen($word) > 1 && !in_array($word, $stopwords)
-        );
     }
 
-    /**
-     * Calcule la similarité entre deux ensembles de mots
-     * Utilise Jaccard similarity + bonus pour les stemmes communs
-     */
     private function calculateSimilarity(array $userWords, array $faqWords): float
     {
         if (empty($userWords) || empty($faqWords)) {
@@ -168,13 +150,11 @@ class ChatbotController extends Controller
         
         foreach ($userWords as $userWord) {
             foreach ($faqWords as $faqWord) {
-                // Correspondance exacte
                 if ($userWord === $faqWord) {
                     $intersect++;
                     break;
                 }
                 
-                // Correspondance partielle (au moins 70% d'identité)
                 if ($this->stringSimilarity($userWord, $faqWord) > 0.7) {
                     $intersect += 0.7;
                     break;
@@ -182,16 +162,12 @@ class ChatbotController extends Controller
             }
         }
 
-        // Jaccard similarity: intersection / union
         $union = count(array_unique(array_merge($userWords, $faqWords)));
         $similarity = $union > 0 ? $intersect / $union : 0;
 
         return min($similarity, 1.0);
     }
 
-    /**
-     * Similarité entre deux mots (Levenshtein)
-     */
     private function stringSimilarity(string $str1, string $str2): float
     {
         $maxLen = max(strlen($str1), strlen($str2));
@@ -201,13 +177,9 @@ class ChatbotController extends Controller
         }
 
         $distance = levenshtein($str1, $str2);
-        
         return 1.0 - ($distance / $maxLen);
     }
 
-    /**
-     * Récupère l'adresse IP du client en toute sécurité
-     */
     private function getClientIp(Request $request): string
     {
         if (!empty($request->server('HTTP_CLIENT_IP'))) {
@@ -218,7 +190,6 @@ class ChatbotController extends Controller
             $ip = $request->server('REMOTE_ADDR');
         }
 
-        // Valider l'IP
         if (!filter_var($ip, FILTER_VALIDATE_IP)) {
             $ip = '0.0.0.0';
         }
