@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
  */
 export const useRecaptcha = (containerId) => {
   const [isReady, setIsReady] = useState(false);
-  const siteKey = '6LeAd38sAAAAAFtP24L1PuL4uWaHV2k0tLve6-qI';
+  const siteKey = '6LdAL4EsAAAAADXHDfopgQ24ciicgXy9nWGm0Xn2';
 
   useEffect(() => {
     // Check if script already loaded globally
