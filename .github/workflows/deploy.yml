@@ -8,23 +8,38 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-      
+        
       - name: Setup SSH key
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
-      
-      - name: Deploy
+          
+      - name: Pull latest code
         run: |
-          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << 'DEPLOY'
           cd /var/www/Atlas-webapp
           git pull origin main
-          docker-compose down
-          docker-compose build --no-cache
-          docker-compose up -d
-          EOF
+          DEPLOY
+          
+      - name: Build and restart (zero-downtime)
+        run: |
+          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << 'DEPLOY'
+          cd /var/www/Atlas-webapp
+          docker-compose build
+          docker-compose up -d --no-deps --build
+          docker image prune -f
+          DEPLOY
+          
+      - name: Health check
+        run: |
+          ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} << 'DEPLOY'
+          sleep 5
+          curl -k https://atlascyber.viewdns.net:8080/api/auth/register -X OPTIONS || exit 1
+          echo "✅ Deployment successful!"
+          DEPLOY
