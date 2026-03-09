@@ -8,7 +8,8 @@ class StoreServicePackRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        // Only admins can create service packs (SECURITY FIX)
+        return $this->user() && $this->user()->isAdmin();
     }
 
     public function rules(): array

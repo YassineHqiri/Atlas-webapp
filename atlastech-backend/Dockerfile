@@ -33,9 +33,14 @@ COPY --from=composer /app /var/www/html
 RUN chown -R www-data:www-data /var/www/html/storage /var/www/html/bootstrap/cache \
     && chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
 
-# Entrypoint: run migrations, then start services
-COPY docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+# Create entrypoint script inline to avoid line ending issues
+RUN echo '#!/bin/sh' > /entrypoint.sh && \
+    echo 'php artisan migrate --force 2>/dev/null || true' >> /entrypoint.sh && \
+    echo 'php artisan cache:clear 2>/dev/null || true' >> /entrypoint.sh && \
+    echo 'php artisan config:clear 2>/dev/null || true' >> /entrypoint.sh && \
+    echo 'php-fpm &' >> /entrypoint.sh && \
+    echo 'nginx -g "daemon off;"' >> /entrypoint.sh && \
+    chmod +x /entrypoint.sh
 
 EXPOSE 80
 

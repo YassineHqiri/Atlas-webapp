@@ -6,10 +6,12 @@ dist/
 build/
 .vite/
 
-# Environment files
+# Environment files - SECRETS, DO NOT COMMIT
 .env
 .env.local
 .env.*.local
+.env.production      # Production secrets (AWS Secrets Manager)
+.env.backend         # Backend secrets (use AWS instead)
 
 # IDE
 .idea/
@@ -24,3 +26,12 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+yarn-error.log*
+
+# Docker
+.dockerignore
+
+# Database
+*.db
+*.sqlite
+*.sqlite3

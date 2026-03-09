@@ -60,13 +60,8 @@ class RecaptchaService
                     'response' => $token,
                 ],
                 'timeout' => 10,
+                'verify' => true, // ALWAYS verify SSL certificates (SECURITY FIX)
             ];
-
-            // For development environments, disable SSL verification
-            // This is needed when cURL certificates are not properly configured
-            if (config('app.env') === 'local' || config('app.env') === 'development') {
-                $options['verify'] = false;
-            }
 
             $response = $this->client->post($this->verifyUrl, $options);
 

@@ -14,11 +14,34 @@ class StoreOrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'customer_name' => 'required|string|max:255',
-            'email' => 'required|email:rfc,dns|max:255',
-            'phone' => 'nullable|string|max:50',
-            'selected_pack_id' => 'required|exists:service_packs,id',
-            'notes' => 'nullable|string|max:1000',
+            'customer_name' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[\p{L}\s\-\.\']+$/u', // Only allow letters, spaces, dashes, periods, apostrophes
+            ],
+            'email' => [
+                'required',
+                'email:rfc,dns',
+                'max:255',
+            ],
+            'phone' => [
+                'nullable',
+                'string',
+                'max:50',
+                'regex:/^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/',
+            ],
+            'selected_pack_id' => [
+                'required',
+                'integer',
+                'exists:service_packs,id',
+            ],
+            'notes' => [
+                'nullable',
+                'string',
+                'max:1000',
+                'not_regex:/<script|<iframe|javascript:|onerror=/i', // XSS prevention
+            ],
         ];
     }
 

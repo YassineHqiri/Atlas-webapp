@@ -14,9 +14,24 @@ class StoreContactRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255',
-            'email' => 'required|email:rfc,dns|max:255',
-            'message' => 'required|string|max:5000',
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[\p{L}\s\-\.\']+$/u', // Only allow letters, spaces, dashes
+            ],
+            'email' => [
+                'required',
+                'email:rfc,dns',
+                'max:255',
+            ],
+            'message' => [
+                'required',
+                'string',
+                'min:10',
+                'max:5000',
+                'not_regex:/<script|<iframe|javascript:|onerror=/i', // XSS prevention (SECURITY FIX)
+            ],
         ];
     }
 

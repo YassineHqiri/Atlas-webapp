@@ -51,7 +51,7 @@ class AuthController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
-            'password' => ['required', 'confirmed', PasswordRule::min(8)],
+            'password' => ['required', 'confirmed', PasswordRule::min(12)->mixedCase()->numbers()->symbols()],
             'g_recaptcha_response' => 'required|string',
         ]);
 
@@ -67,8 +67,7 @@ class AuthController extends Controller
 
             Log::info('User registered successfully', [
                 'user_id' => $user->id,
-                'email' => $user->email,
-                'ip' => $request->ip(),
+                'ip_hash' => hash('sha256', $request->ip()), // Hash IP instead of plaintext (SECURITY FIX)
             ]);
 
             return response()->json([
@@ -86,8 +85,9 @@ class AuthController extends Controller
             ], 201);
         } catch (\Exception $e) {
             Log::error('Registration failed', [
-                'error' => $e->getMessage(),
-                'email' => $validated['email'],
+                'error_type' => get_class($e),
+                'ip_hash' => hash('sha256', $request->ip()), // Hash IP (SECURITY FIX)
+                // Don't log: error message, email, password
             ]);
 
             FailedAuthAttempt::record(
@@ -149,8 +149,8 @@ class AuthController extends Controller
             );
 
             Log::warning('Failed login attempt', [
-                'email' => $credentials['email'],
-                'ip' => $request->ip(),
+                'ip_hash' => hash('sha256', $request->ip()), // Hash IP (SECURITY FIX)
+                // Don't log: email, password, full details
             ]);
 
             return response()->json([
@@ -167,8 +167,8 @@ class AuthController extends Controller
 
             Log::info('User logged in successfully', [
                 'user_id' => $user->id,
-                'email' => $user->email,
-                'ip' => $request->ip(),
+                'ip_hash' => hash('sha256', $request->ip()), // Hash IP (SECURITY FIX)
+                // Don't log: email, full user details
             ]);
 
             return response()->json([
@@ -256,7 +256,7 @@ class AuthController extends Controller
         $request->validate([
             'token' => 'required',
             'email' => 'required|email',
-            'password' => ['required', 'confirmed', PasswordRule::min(8)],
+            'password' => ['required', 'confirmed', PasswordRule::min(12)->mixedCase()->numbers()->symbols()],
         ]);
 
         $status = Password::reset(

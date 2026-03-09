@@ -15,10 +15,10 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 Route::prefix('auth')->group(function () {
-    Route::post('/register', [\App\Http\Controllers\Api\AuthController::class, 'register'])->middleware('protect.auth');
-    Route::post('/login', [\App\Http\Controllers\Api\AuthController::class, 'login'])->middleware('protect.auth');
-    Route::post('/forgot-password', [\App\Http\Controllers\Api\AuthController::class, 'forgotPassword']);
-    Route::post('/reset-password', [\App\Http\Controllers\Api\AuthController::class, 'resetPassword']);
+    Route::post('/register', [\App\Http\Controllers\Api\AuthController::class, 'register'])->middleware(['protect.auth', 'throttle:3,60']); // 3 per hour (SECURITY FIX)
+    Route::post('/login', [\App\Http\Controllers\Api\AuthController::class, 'login'])->middleware(['protect.auth', 'throttle:5,1']); // 5 per minute (SECURITY FIX)
+    Route::post('/forgot-password', [\App\Http\Controllers\Api\AuthController::class, 'forgotPassword'])->middleware('throttle:3,60'); // 3 per hour (SECURITY FIX)
+    Route::post('/reset-password', [\App\Http\Controllers\Api\AuthController::class, 'resetPassword'])->middleware('throttle:5,60'); // 5 per hour (SECURITY FIX)
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [\App\Http\Controllers\Api\AuthController::class, 'me']);
         Route::post('/logout', [\App\Http\Controllers\Api\AuthController::class, 'logout']);
@@ -34,16 +34,16 @@ Route::prefix('customer')->middleware(['auth:sanctum', 'customer'])->group(funct
 
 Route::prefix('public')->group(function () {
     Route::get('/service-packs', [PublicController::class, 'servicePacks']);
-    Route::post('/orders', [PublicController::class, 'order'])->middleware('optionalAuth');
-    Route::post('/contact', [PublicController::class, 'contact']);
+    Route::post('/orders', [PublicController::class, 'order'])->middleware(['optionalAuth', 'throttle:10,60']); // 10 per hour (SECURITY FIX)
+    Route::post('/contact', [PublicController::class, 'contact'])->middleware('throttle:5,60'); // 5 per hour (SECURITY FIX)
 });
 
 Route::prefix('chatbot')->group(function () {
-    Route::post('/reply', [ChatbotController::class, 'reply']);
+    Route::post('/reply', [ChatbotController::class, 'reply'])->middleware('throttle:10,1'); // 10 per minute (SECURITY FIX)
 });
 
 Route::prefix('admin')->group(function () {
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:3,5'); // 3 per 5 minutes (SECURITY FIX)
     
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);

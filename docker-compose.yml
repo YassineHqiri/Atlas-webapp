@@ -7,33 +7,15 @@ services:
       dockerfile: Dockerfile
     container_name: atlastech-backend
     ports:
-      - "8080:443"
-    volumes:
-      - /etc/letsencrypt/live/atlascyber.viewdns.net/fullchain.pem:/etc/nginx/ssl/cert.pem:ro
-      - /etc/letsencrypt/live/atlascyber.viewdns.net/privkey.pem:/etc/nginx/ssl/key.pem:ro
+      - "8080:80"
+    env_file:
+      - .env.production
     environment:
-      - APP_NAME=AtlasTech
       - APP_ENV=production
       - APP_DEBUG=false
-      - APP_KEY=base64:Guycw2K728RHaKqECZ5MmbXCbDULQX31rDN61iL/OXw=
-      - APP_URL=https://atlascyber.viewdns.net
-      - FRONTEND_URL=https://atlascyber.viewdns.net
-
-      - DB_CONNECTION=mysql
-      - DB_HOST=atlascommercial.c1u4ayqi0rzj.eu-north-1.rds.amazonaws.com
-      - DB_PORT=3306
-      - DB_DATABASE=atlascommercial
-      - DB_USERNAME=admin
-      - DB_PASSWORD=33Qlpbtx7iYARTPO
-      - SESSION_DRIVER=database
-      - CACHE_DRIVER=file
-      - CORS_ALLOWED_ORIGINS=https://atlascyber.viewdns.net
-      - SANCTUM_STATEFUL_DOMAINS=atlascyber.viewdns.net
-      - RECAPTCHA_SITE_KEY=6LdAL4EsAAAAADXHDfopgQ24ciicgXy9nWGm0Xn2
-      - RECAPTCHA_SECRET_KEY=6LdAL4EsAAAAAPKdvvhOWmhI2gOBfo09mmEIyBnj
-
     networks:
       - atlas-network
+    restart: unless-stopped
 
   # Frontend
   atlastech-frontend:
@@ -41,13 +23,11 @@ services:
       context: ./atlastech-frontend
       dockerfile: Dockerfile
       args:
-        VITE_API_URL: https://atlascyber.viewdns.net:8080/api
+        VITE_API_URL: http://localhost:8080/api
     container_name: atlastech-frontend
     ports:
-      - "443:443"
-    volumes:
-      - /etc/letsencrypt/live/atlascyber.viewdns.net/fullchain.pem:/etc/nginx/ssl/cert.pem:ro
-      - /etc/letsencrypt/live/atlascyber.viewdns.net/privkey.pem:/etc/nginx/ssl/key.pem:ro
+      - "3000:80"
+    restart: unless-stopped
     networks:
       - atlas-network
     depends_on:

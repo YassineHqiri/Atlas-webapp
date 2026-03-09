@@ -21,6 +21,7 @@ class Kernel extends HttpKernel
         \Illuminate\Foundation\Http\Middleware\ValidatePostSize::class,
         \App\Http\Middleware\TrimStrings::class,
         \Illuminate\Foundation\Http\Middleware\ConvertEmptyStringsToNull::class,
+        \App\Http\Middleware\SecurityHeaders::class, // Add security headers to all responses
     ];
 
     /**
@@ -66,5 +67,6 @@ class Kernel extends HttpKernel
         'optionalAuth' => \App\Http\Middleware\OptionalSanctum::class,
         'customer' => \App\Http\Middleware\EnsureCustomer::class,
         'protect.auth' => \App\Http\Middleware\ProtectAgainstAuthAttacks::class,
+        'security.headers' => \App\Http\Middleware\SecurityHeaders::class,
     ];
 }
