@@ -1,15 +1,19 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { publicApi } from '../../services/api';
 
 const ForgotPassword = () => {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
+  const [code, setCode] = useState('');
   const [loading, setLoading] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [codeSent, setCodeSent] = useState(false);
+  const [verifyingCode, setVerifyingCode] = useState(false);
+  const [codeVerified, setCodeVerified] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const handleSendCode = async (e) => {
     e.preventDefault();
     if (!email.trim()) {
       toast.error('Enter your email');
@@ -18,8 +22,8 @@ const ForgotPassword = () => {
     setLoading(true);
     try {
       await publicApi.post('/auth/forgot-password', { email });
-      setSent(true);
-      toast.success('Check your email for the reset link');
+      setCodeSent(true);
+      toast.success('Verification code sent to your email');
     } catch (err) {
       toast.error(err.response?.data?.message || 'Something went wrong');
     } finally {
@@ -27,35 +31,103 @@ const ForgotPassword = () => {
     }
   };
 
-  if (sent) {
+  const handleVerifyCode = async (e) => {
+    e.preventDefault();
+    if (!code.trim() || code.length !== 6) {
+      toast.error('Enter a valid 6-digit code');
+      return;
+    }
+    setVerifyingCode(true);
+    try {
+      await publicApi.post('/auth/verify-reset-code', { 
+        email, 
+        code 
+      });
+      setCodeVerified(true);
+      toast.success('Code verified! Redirecting to password reset...');
+      
+      // Redirect to reset password page after 2 seconds
+      setTimeout(() => {
+        navigate(`/reset-password?email=${encodeURIComponent(email)}&verified=true`);
+      }, 2000);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Invalid code');
+    } finally {
+      setVerifyingCode(false);
+    }
+  };
+
+  // Show code verification form after code is sent
+  if (codeSent && !codeVerified) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6 py-12">
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md text-center">
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
           <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
-              <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
+            <div className="text-center mb-8">
+              <h1 className="font-display text-2xl font-bold text-gray-900">Enter Verification Code</h1>
+              <p className="text-gray-500 text-sm mt-1">We sent a 6-digit code to <strong>{email}</strong></p>
             </div>
-            <h1 className="font-display text-xl font-bold text-gray-900">Check your email</h1>
-            <p className="text-gray-500 text-sm mt-2">We sent a password reset link to <strong>{email}</strong></p>
-            <Link to="/login" className="inline-block mt-6 text-purple-600 font-semibold hover:text-purple-700">Back to Log in</Link>
+
+            <form onSubmit={handleVerifyCode} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Verification Code</label>
+                <input
+                  type="text"
+                  maxLength="6"
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ''))}
+                  className="w-full px-4 py-3 rounded-2xl border border-gray-200 text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500 text-center text-2xl font-mono tracking-widest"
+                  placeholder="000000"
+                />
+                <p className="text-gray-500 text-xs mt-2">Code expires in 15 minutes</p>
+              </div>
+              <button
+                type="submit"
+                disabled={verifyingCode || code.length !== 6}
+                className="w-full py-3 bg-black text-white font-semibold rounded-2xl hover:bg-gray-800 transition-colors disabled:opacity-50"
+              >
+                {verifyingCode ? 'Verifying...' : 'Verify Code'}
+              </button>
+            </form>
+
+            <p className="text-center text-sm mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setCodeSent(false);
+                  setCode('');
+                  setEmail('');
+                }}
+                className="text-purple-600 hover:text-purple-700"
+              >
+                ← Use different email
+              </button>
+            </p>
+
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <p className="text-center text-gray-500 text-xs">
+                Code expires in 15 minutes. Check your spam folder if you don't see the email.
+              </p>
+            </div>
           </div>
         </motion.div>
       </div>
     );
   }
 
+  // Initial form to enter email
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6 py-12">
       <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-md">
         <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8">
           <div className="text-center mb-8">
             <h1 className="font-display text-2xl font-bold text-gray-900">Forgot Password</h1>
-            <p className="text-gray-500 text-sm mt-1">Enter your email and we'll send you a reset link</p>
+            <p className="text-gray-500 text-sm mt-1">Enter your email and we'll send you a verification code</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSendCode} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
               <input
@@ -71,7 +143,7 @@ const ForgotPassword = () => {
               disabled={loading}
               className="w-full py-3 bg-black text-white font-semibold rounded-2xl hover:bg-gray-800 transition-colors disabled:opacity-50"
             >
-              {loading ? 'Sending...' : 'Send Reset Link'}
+              {loading ? 'Sending...' : 'Send Verification Code'}
             </button>
           </form>
 

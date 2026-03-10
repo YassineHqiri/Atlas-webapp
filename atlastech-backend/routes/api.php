@@ -18,6 +18,8 @@ Route::prefix('auth')->group(function () {
     Route::post('/register', [\App\Http\Controllers\Api\AuthController::class, 'register'])->middleware(['protect.auth', 'throttle:3,60']); // 3 per hour (SECURITY FIX)
     Route::post('/login', [\App\Http\Controllers\Api\AuthController::class, 'login'])->middleware(['protect.auth', 'throttle:5,1']); // 5 per minute (SECURITY FIX)
     Route::post('/forgot-password', [\App\Http\Controllers\Api\AuthController::class, 'forgotPassword'])->middleware('throttle:3,60'); // 3 per hour (SECURITY FIX)
+    Route::post('/verify-reset-code', [\App\Http\Controllers\Api\AuthController::class, 'verifyResetCode'])->middleware('throttle:5,60'); // 5 per hour (SECURITY FIX)
+    Route::post('/change-password', [\App\Http\Controllers\Api\AuthController::class, 'changePassword'])->middleware('throttle:5,60'); // 5 per hour (SECURITY FIX)
     Route::post('/reset-password', [\App\Http\Controllers\Api\AuthController::class, 'resetPassword'])->middleware('throttle:5,60'); // 5 per hour (SECURITY FIX)
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('/me', [\App\Http\Controllers\Api\AuthController::class, 'me']);

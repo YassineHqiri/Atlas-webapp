@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\FailedAuthAttempt;
 use App\Models\User;
+use App\Models\PasswordResetCode;
 use App\Services\RecaptchaService;
+use App\Notifications\PasswordResetCodeNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -236,19 +238,175 @@ class AuthController extends Controller
     {
         $request->validate(['email' => 'required|email']);
 
-        $status = Password::sendResetLink($request->only('email'));
+        $email = $request->input('email');
 
-        if ($status === Password::RESET_LINK_SENT) {
+        // Verify user exists
+        $user = User::where('email', $email)->first();
+        if (!$user) {
             return response()->json([
-                'success' => true,
-                'message' => 'Password reset link sent to your email',
-            ]);
+                'success' => false,
+                'message' => 'We could not find a user with that email address.',
+            ], 400);
         }
 
+        // Generate a 6-digit verification code
+        $code = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        // Store or update the code in database (expires in 15 minutes)
+        PasswordResetCode::updateOrCreate(
+            ['email' => $email],
+            [
+                'code' => $code,
+                'code_verified' => false,
+                'code_expires_at' => now()->addMinutes(15),
+            ]
+        );
+
+        // Send the code via email
+        try {
+            $user->notify(new PasswordResetCodeNotification($code, $email));
+
+            Log::info('Password reset code sent', [
+                'email_hash' => hash('sha256', $email),
+                'timestamp' => now(),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Verification code sent to your email. Valid for 15 minutes.',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to send password reset code', [
+                'error' => $e->getMessage(),
+                'email_hash' => hash('sha256', $email),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to send verification code. Please try again.',
+            ], 500);
+        }
+    }
+
+    public function verifyResetCode(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'code' => 'required|string|size:6',
+        ]);
+
+        $email = $request->input('email');
+        $code = $request->input('code');
+
+        // Find and validate the code
+        $resetCode = PasswordResetCode::findValidCode($email, $code);
+
+        if (!$resetCode) {
+            Log::warning('Invalid password reset code attempt', [
+                'email_hash' => hash('sha256', $email),
+                'ip_hash' => hash('sha256', $request->ip()),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid or expired verification code.',
+            ], 400);
+        }
+
+        // Mark code as verified
+        $resetCode->markAsVerified();
+
+        Log::info('Password reset code verified', [
+            'email_hash' => hash('sha256', $email),
+        ]);
+
         return response()->json([
-            'success' => false,
-            'message' => 'We could not find a user with that email address.',
-        ], 400);
+            'success' => true,
+            'message' => 'Code verified successfully. You can now reset your password.',
+        ]);
+    }
+
+    public function changePassword(Request $request): JsonResponse
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'old_password' => 'required|string',
+            'password' => ['required', 'confirmed', PasswordRule::min(12)->mixedCase()->numbers()->symbols()],
+        ]);
+
+        $email = $request->input('email');
+        $oldPassword = $request->input('old_password');
+
+        // Find user
+        $user = User::where('email', $email)->first();
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'We could not find a user with that email address.',
+            ], 400);
+        }
+
+        // Check if old password is correct
+        if (!Hash::check($oldPassword, $user->password)) {
+            Log::warning('Incorrect old password on password change', [
+                'user_id' => $user->id,
+                'email_hash' => hash('sha256', $email),
+                'ip_hash' => hash('sha256', $request->ip()),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'The old password you entered is incorrect.',
+            ], 401);
+        }
+
+        // Check if code has been verified
+        $resetCode = PasswordResetCode::where('email', $email)
+            ->where('code_verified', true)
+            ->where('code_expires_at', '>', now())
+            ->latest()
+            ->first();
+
+        if (!$resetCode) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Your verification code has expired or is invalid. Please request a new one.',
+            ], 400);
+        }
+
+        // Update password
+        try {
+            $user->update([
+                'password' => Hash::make($request->input('password')),
+                'remember_token' => Str::random(60),
+            ]);
+
+            // Clean up the reset code
+            $resetCode->delete();
+
+            // Revoke all existing tokens for security
+            $user->tokens()->delete();
+
+            Log::info('Password changed successfully', [
+                'user_id' => $user->id,
+                'email_hash' => hash('sha256', $email),
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Password changed successfully. Please log in with your new password.',
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Failed to change password', [
+                'error' => $e->getMessage(),
+                'user_id' => $user->id,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to change password. Please try again.',
+            ], 500);
+        }
     }
 
     public function resetPassword(Request $request): JsonResponse
