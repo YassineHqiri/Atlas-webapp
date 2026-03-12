@@ -36,4 +36,11 @@ return [
         'secret_key' => env('RECAPTCHA_SECRET_KEY'),
     ],
 
+    // Groq AI Configuration for Staff Chatbot
+    'groq' => [
+        'api_key' => env('STAFF_AI_API_KEY'),
+        'api_url' => env('STAFF_AI_API_URL', 'https://api.groq.com/openai/v1/chat/completions'),
+        'model' => env('STAFF_AI_MODEL', 'llama-3.1-8b-instant'),
+    ],
+
 ];

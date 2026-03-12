@@ -220,27 +220,3 @@ const ResetPassword = () => {
 };
 
 export default ResetPassword;
-                onChange={(e) => setPasswordConfirmation(e.target.value)}
-                className="w-full px-4 py-3 rounded-2xl border border-gray-200 text-gray-900 placeholder-gray-400 outline-none focus:ring-2 focus:ring-purple-500/30 focus:border-purple-500"
-                placeholder="Re-enter password"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 bg-black text-white font-semibold rounded-2xl hover:bg-gray-800 transition-colors disabled:opacity-50"
-            >
-              {loading ? 'Resetting...' : 'Reset Password'}
-            </button>
-          </form>
-
-          <p className="text-center text-sm mt-6">
-            <Link to="/login" className="text-purple-600 hover:text-purple-700">← Back to Log in</Link>
-          </p>
-        </div>
-      </motion.div>
-    </div>
-  );
-};
-
-export default ResetPassword;

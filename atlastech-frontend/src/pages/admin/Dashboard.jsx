@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import api from '../../services/api';
+import StaffChatbotWidget from '../../components/admin/StaffChatbotWidget';
 
 const Dashboard = () => {
   const [stats, setStats] = useState(null);
@@ -64,7 +65,7 @@ const Dashboard = () => {
             <h2 className="font-semibold text-gray-900">CRM Overview</h2>
             <Link to="/admin/crm/leads" className="text-sm text-purple-600 font-medium hover:underline">View CRM →</Link>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
             <div className="bg-white/70 rounded-xl p-4 text-center">
               <p className="text-2xl font-extrabold text-purple-700">{crmStats.total_leads ?? 0}</p>
               <p className="text-xs text-gray-500 mt-0.5">Total Leads</p>
@@ -82,6 +83,26 @@ const Dashboard = () => {
               <p className="text-xs text-gray-500 mt-0.5">Won Value</p>
             </div>
           </div>
+        </div>
+      </motion.div>
+
+      {/* AI Assistant Section */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
+        className="mb-8">
+        <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl border border-gray-700 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-3">
+              <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-2.5 rounded-xl">
+                <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <h2 className="font-bold text-lg text-white">Worker Assistant</h2>
+            </div>
+            <Link to="/admin/ai-assistant" className="text-xs bg-purple-600 hover:bg-purple-700 text-white px-3 py-1.5 rounded-lg font-medium transition-all">Open Chat</Link>
+          </div>
+          <p className="text-gray-300 text-sm mb-4">Ask questions about your work, company policies, services, and more.</p>
+          <StaffChatbotWidget inline={true} />
         </div>
       </motion.div>
 

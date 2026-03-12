@@ -16,6 +16,11 @@ class SecurityHeaders
      */
     public function handle(Request $request, Closure $next)
     {
+        // Skip security headers on OPTIONS preflight requests to avoid interfering with CORS
+        if ($request->isMethod('OPTIONS')) {
+            return $next($request);
+        }
+
         $response = $next($request);
 
         // Prevent clickjacking attacks - only allow frames from same origin
@@ -27,12 +32,17 @@ class SecurityHeaders
         // Enable browser XSS protection
         $response->header('X-XSS-Protection', '1; mode=block');
 
-        // Enforce HTTPS (strict transport security)
-        // max-age: 31536000 seconds = 1 year
-        $response->header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+        // Enforce HTTPS (strict transport security) - only in production
+        if (app()->environment('production')) {
+            $response->header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+        }
 
         // Content Security Policy - restrict resource loading to prevent injection attacks
-        // This is a strict CSP that only allows resources from same origin
+        $connectSrc = "'self' https://api.atlascyber.com";
+        if (app()->environment('local')) {
+            $connectSrc .= " http://localhost:* http://127.0.0.1:*";
+        }
+
         $response->header('Content-Security-Policy', 
             "default-src 'self'; " .
             "script-src 'self' https://cdn.jsdelivr.net https://js.recaptcha.net; " .
@@ -40,7 +50,7 @@ class SecurityHeaders
             "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; " .
             "img-src 'self' data: https:; " .
             "font-src 'self' data: https://fonts.googleapis.com; " .
-            "connect-src 'self' https://api.atlascyber.com; " .
+            "connect-src {$connectSrc}; " .
             "upgrade-insecure-requests; " .
             "block-all-mixed-content"
         );

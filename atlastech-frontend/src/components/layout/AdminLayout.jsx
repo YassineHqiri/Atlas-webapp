@@ -27,6 +27,12 @@ const AdminLayout = ({ children }) => {
     )},
   ];
 
+  const aiItems = [
+    { name: 'AI Assistant', path: '/admin/ai-assistant', icon: (
+      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.8"><path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+    )},
+  ];
+
   const handleLogout = async () => {
     await logout();
     navigate('/admin/login');
@@ -77,6 +83,26 @@ const AdminLayout = ({ children }) => {
                 `flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm font-medium transition-all ${
                   isActive
                     ? 'bg-purple-500/20 text-purple-300'
+                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                }`
+              }
+            >
+              {item.icon}
+              {item.name}
+            </NavLink>
+          ))}
+
+          <div className="pt-4 pb-1">
+            <p className="px-4 text-[10px] font-bold uppercase tracking-widest text-gray-600 mb-1">AI Tools</p>
+          </div>
+          {aiItems.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-2.5 rounded-2xl text-sm font-medium transition-all ${
+                  isActive
+                    ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20'
                     : 'text-gray-400 hover:text-white hover:bg-white/5'
                 }`
               }

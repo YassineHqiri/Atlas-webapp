@@ -1,5 +1,26 @@
 version: '3.8'
 services:
+  # Database
+  atlastech-db:
+    image: mysql:8.0
+    container_name: atlastech-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: atlastech
+      MYSQL_USER: atlastech
+      MYSQL_PASSWORD: atlastech
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - atlas-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
   # Backend API
   atlastech-backend:
     build:
@@ -13,9 +34,16 @@ services:
     environment:
       - APP_ENV=production
       - APP_DEBUG=false
+      - DB_HOST=atlastech-db
+      - DB_DATABASE=atlastech
+      - DB_USERNAME=atlastech
+      - DB_PASSWORD=atlastech
     networks:
       - atlas-network
     restart: unless-stopped
+    depends_on:
+      atlastech-db:
+        condition: service_healthy
 
   # Frontend
   atlastech-frontend:
@@ -36,3 +64,6 @@ services:
 networks:
   atlas-network:
     driver: bridge
+
+volumes:
+  mysql_data:

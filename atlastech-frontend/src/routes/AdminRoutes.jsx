@@ -7,6 +7,7 @@ import ServicePacks from '../pages/admin/ServicePacks';
 import CrmLeads from '../pages/admin/CrmLeads';
 import CrmLeadDetail from '../pages/admin/CrmLeadDetail';
 import CrmPipeline from '../pages/admin/CrmPipeline';
+import AiAssistant from '../pages/admin/AiAssistant';
 import Login from '../pages/admin/Login';
 
 const PrivateRoute = ({ children }) => {
@@ -53,6 +54,7 @@ const AdminRoutes = () => {
                 <Route path="crm/leads" element={<CrmLeads />} />
                 <Route path="crm/leads/:id" element={<CrmLeadDetail />} />
                 <Route path="crm/pipeline" element={<CrmPipeline />} />
+                <Route path="ai-assistant" element={<AiAssistant />} />
               </Routes>
             </AdminLayout>
           </PrivateRoute>

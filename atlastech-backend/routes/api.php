@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\Admin\DashboardController;
 use App\Http\Controllers\Api\Admin\OrderController;
 use App\Http\Controllers\Api\Admin\ServicePackController;
 use App\Http\Controllers\Api\Admin\CrmController;
+use App\Http\Controllers\Api\Admin\StaffChatbotController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -45,7 +46,7 @@ Route::prefix('chatbot')->group(function () {
 });
 
 Route::prefix('admin')->group(function () {
-    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:3,5'); // 3 per 5 minutes (SECURITY FIX)
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:20,1'); // 20 per minute (TEMPORARY - for testing)
     
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
@@ -75,5 +76,8 @@ Route::prefix('admin')->group(function () {
             Route::post('/leads/{lead}/notes',               [CrmController::class, 'addNote']);
             Route::delete('/leads/{lead}/notes/{note}',      [CrmController::class, 'deleteNote']);
         });
+
+        // Staff Chatbot
+        Route::post('/staff-chatbot/reply', [StaffChatbotController::class, 'reply'])->middleware('throttle:20,1');
     });
 });
